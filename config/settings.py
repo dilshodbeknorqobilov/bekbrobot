@@ -31,6 +31,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -86,6 +87,17 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# WhiteNoise orqali statik fayllarni (admin CSS/JS) gunicorn'ning o'zi xizmat
+# qiladi — nginx shart emas (qarang: DEPLOY.md, 8090-port bo'yicha sozlama).
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

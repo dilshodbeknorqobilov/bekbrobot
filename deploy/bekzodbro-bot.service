@@ -1,0 +1,16 @@
+[Unit]
+Description=Bekzodbro Telegram Bot
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/bekzodbro
+EnvironmentFile=/opt/bekzodbro/.env
+ExecStart=/opt/bekzodbro/venv/bin/python /opt/bekzodbro/bot/main.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

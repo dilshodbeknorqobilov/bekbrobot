@@ -75,9 +75,14 @@ python manage.py collectstatic --noinput
 
 ## 6. Bot uchun systemd xizmati
 
+Tayyor fayl repoda: `deploy/bekzodbro-bot.service`. Uni to'g'ridan-to'g'ri
+nusxalash kifoya:
+
 ```bash
-sudo nano /etc/systemd/system/bekzodbro-bot.service
+sudo cp /opt/bekzodbro/deploy/bekzodbro-bot.service /etc/systemd/system/bekzodbro-bot.service
 ```
+
+Fayl mazmuni (agar qo'lda tahrirlamoqchi bo'lsangiz — `sudo nano /etc/systemd/system/bekzodbro-bot.service`):
 
 ```ini
 [Unit]
@@ -104,9 +109,13 @@ Django admin **8090** portda ishga tushadi. `0.0.0.0:8090` — bu server tashqi
 IP manzili orqali (masalan `http://SERVER_IP:8090/admin/`) to'g'ridan-to'g'ri
 ulanish imkonini beradi, nginx shart emas.
 
+Tayyor fayl repoda: `deploy/bekzodbro-web.service`:
+
 ```bash
-sudo nano /etc/systemd/system/bekzodbro-web.service
+sudo cp /opt/bekzodbro/deploy/bekzodbro-web.service /etc/systemd/system/bekzodbro-web.service
 ```
+
+Fayl mazmuni:
 
 ```ini
 [Unit]
@@ -149,11 +158,15 @@ Endi `http://SERVER_IP:8090/admin/` manzilidan admin panelga kirish mumkin
 ## 8. Nginx (ixtiyoriy — domen va HTTPS uchun)
 
 Agar keyinchalik domen ulab, standart 80/443 portlar orqali (HTTPS bilan)
-ishlatmoqchi bo'lsangiz, nginx'ni 8090-portga proxy qilib sozlang:
+ishlatmoqchi bo'lsangiz, nginx'ni 8090-portga proxy qilib sozlang. Tayyor fayl
+repoda: `deploy/nginx/bekzodbro.conf`.
 
 ```bash
-sudo nano /etc/nginx/sites-available/bekzodbro
+sudo cp /opt/bekzodbro/deploy/nginx/bekzodbro.conf /etc/nginx/sites-available/bekzodbro
+sudo nano /etc/nginx/sites-available/bekzodbro   # your-domain.com ni o'z domeningizga almashtiring
 ```
+
+Fayl mazmuni:
 
 ```nginx
 server {
