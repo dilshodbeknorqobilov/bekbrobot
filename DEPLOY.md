@@ -100,6 +100,10 @@ WantedBy=multi-user.target
 
 ## 7. Django admin uchun gunicorn systemd xizmati
 
+Django admin **8090** portda ishga tushadi. `0.0.0.0:8090` — bu server tashqi
+IP manzili orqali (masalan `http://SERVER_IP:8090/admin/`) to'g'ridan-to'g'ri
+ulanish imkonini beradi, nginx shart emas.
+
 ```bash
 sudo nano /etc/systemd/system/bekzodbro-web.service
 ```
@@ -115,7 +119,7 @@ User=www-data
 Group=www-data
 WorkingDirectory=/opt/bekzodbro
 EnvironmentFile=/opt/bekzodbro/.env
-ExecStart=/opt/bekzodbro/venv/bin/gunicorn config.wsgi:application --bind 127.0.0.1:8000 --workers 3
+ExecStart=/opt/bekzodbro/venv/bin/gunicorn config.wsgi:application --bind 0.0.0.0:8090 --workers 3
 Restart=always
 RestartSec=5
 
@@ -132,7 +136,20 @@ sudo systemctl enable --now bekzodbro-bot bekzodbro-web
 sudo systemctl status bekzodbro-bot bekzodbro-web
 ```
 
-## 8. Nginx (admin panel uchun reverse proxy)
+`.env` faylida `ALLOWED_HOSTS` ga server IP manzilini (yoki domenni) qo'shishni
+unutmang, aks holda Django `Bad Request (400)` qaytaradi:
+
+```
+ALLOWED_HOSTS=SERVER_IP,your-domain.com
+```
+
+Endi `http://SERVER_IP:8090/admin/` manzilidan admin panelga kirish mumkin
+(pastdagi 9-bandda 8090 portni firewall'da ochish kerak).
+
+## 8. Nginx (ixtiyoriy — domen va HTTPS uchun)
+
+Agar keyinchalik domen ulab, standart 80/443 portlar orqali (HTTPS bilan)
+ishlatmoqchi bo'lsangiz, nginx'ni 8090-portga proxy qilib sozlang:
 
 ```bash
 sudo nano /etc/nginx/sites-available/bekzodbro
@@ -152,7 +169,7 @@ server {
     }
 
     location / {
-        proxy_pass http://127.0.0.1:8000;
+        proxy_pass http://127.0.0.1:8090;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -174,12 +191,24 @@ sudo apt install -y certbot python3-certbot-nginx
 sudo certbot --nginx -d your-domain.com
 ```
 
+> Eslatma: agar nginx orqali (domen bilan) ishlatsangiz, xavfsizlik uchun
+> gunicorn'ni faqat ichki tarmoqqa ochish tavsiya etiladi — yuqoridagi
+> `--bind 0.0.0.0:8090` ni `--bind 127.0.0.1:8090` ga o'zgartiring va 9-banddagi
+> `8090/tcp` qoidasini ufw'dan olib tashlang (chunki tashqi kirish endi faqat
+> nginx orqali, 80/443 portda bo'ladi).
+
 ## 9. Firewall
 
 ```bash
 sudo ufw allow OpenSSH
-sudo ufw allow 'Nginx Full'
+sudo ufw allow 8090/tcp
 sudo ufw enable
+```
+
+Agar nginx ham ishlatilsa (8-band), qo'shimcha:
+
+```bash
+sudo ufw allow 'Nginx Full'
 ```
 
 ## 10. Loglarni kuzatish
