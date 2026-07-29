@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Bekzodbro — aiogram 3 + Django 5.2 + PostgreSQL bot
 
 ## Loyiha haqida
@@ -120,3 +121,6 @@ bekzodbro/
 Docker ishlatilmaydi. Ubuntu server uchun to'liq qo'llanma **DEPLOY.md**
 faylida — PostgreSQL o'rnatish, systemd xizmatlari (bot va Django alohida),
 nginx va HTTPS sozlash bosqichma-bosqich yozilgan.
+=======
+# bekbrobot
+>>>>>>> ff77de074b19f72517e16aa579ff88db89d16a7f
