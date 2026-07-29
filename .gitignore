@@ -1,0 +1,12 @@
+.env
+__pycache__/
+*.pyc
+venv/
+.venv/
+media/
+staticfiles/
+db.sqlite3
+*.log
+
+# Haqiqiy PDF test fayllari repo'ga tushmasin (papka strukturasi .gitkeep bilan saqlanadi)
+testpdf/*.pdf
