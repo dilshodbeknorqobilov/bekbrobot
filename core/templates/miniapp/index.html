@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Bekzodbro Mini App</title>
+    <!-- Telegram WebApp JS SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg-color: var(--tg-theme-bg-color, #f4f5f7);
+            --text-color: var(--tg-theme-text-color, #1c1e21);
+            --hint-color: var(--tg-theme-hint-color, #8e8e93);
+            --link-color: var(--tg-theme-link-color, #2481cc);
+            --button-color: var(--tg-theme-button-color, #2481cc);
+            --button-text-color: var(--tg-theme-button-text-color, #ffffff);
+            --secondary-bg: var(--tg-theme-secondary-bg-color, #ffffff);
+            --card-border: rgba(0, 0, 0, 0.08);
+            --success-color: #34c759;
+            --danger-color: #ff3b30;
+            --warning-color: #ff9500;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            padding-bottom: 75px;
+        }
+
+        .header {
+            background: var(--secondary-bg);
+            padding: 16px;
+            border-bottom: 1px solid var(--card-border);
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .header .user-badge {
+            font-size: 13px;
+            color: var(--hint-color);
+            margin-top: 4px;
+        }
+
+        .container {
+            padding: 16px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: var(--secondary-bg);
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            border: 1px solid var(--card-border);
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Form elementlari */
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--hint-color);
+            margin-bottom: 6px;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid var(--card-border);
+            background: var(--bg-color);
+            color: var(--text-color);
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .input-field:focus {
+            border-color: var(--button-color);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 13px;
+            background: var(--button-color);
+            color: var(--button-text-color);
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+            opacity: 0.9;
+        }
+
+        .btn-secondary {
+            background: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--card-border);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Rasm yuklash maydoni */
+        .photo-picker {
+            border: 2px dashed var(--hint-color);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            background: var(--bg-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .photo-picker input[type="file"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .photo-preview {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 8px;
+            display: none;
+            margin: 10px auto 0;
+            object-fit: cover;
+        }
+
+        /* Qidiruv natijasi kartochkasi */
+        .result-card {
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+        }
+
+        .result-photo {
+            width: 75px;
+            height: 75px;
+            border-radius: 10px;
+            object-fit: cover;
+            background: #e1e4e8;
+            flex-shrink: 0;
+        }
+
+        .result-info h3 {
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+
+        .result-info p {
+            font-size: 13px;
+            color: var(--hint-color);
+            margin-bottom: 2px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-success { background: rgba(52, 199, 89, 0.15); color: var(--success-color); }
+        .badge-warning { background: rgba(255, 149, 0, 0.15); color: var(--warning-color); }
+        .badge-danger { background: rgba(255, 59, 48, 0.15); color: var(--danger-color); }
+
+        /* Pastki menyu (Tab Bar) */
+        .tab-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--secondary-bg);
+            border-top: 1px solid var(--card-border);
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0;
+            z-index: 100;
+        }
+
+        .tab-item {
+            flex: 1;
+            text-align: center;
+            font-size: 11px;
+            color: var(--hint-color);
+            cursor: pointer;
+            padding: 4px;
+            transition: color 0.2s;
+        }
+
+        .tab-item.active {
+            color: var(--button-color);
+            font-weight: 600;
+        }
+
+        .tab-icon {
+            font-size: 20px;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .tab-pane {
+            display: none;
+        }
+
+        .tab-pane.active {
+            display: block;
+        }
+
+        /* Bannerlar */
+        .banner {
+            padding: 12px 14px;
+            border-radius: 10px;
+            font-size: 14px;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .banner-warning { background: rgba(255, 149, 0, 0.15); color: #b86e00; }
+        .banner-success { background: rgba(52, 199, 89, 0.15); color: #1e7e34; }
+        .banner-danger { background: rgba(255, 59, 48, 0.15); color: #c82333; }
+
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid #ffffff;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Bekzodbro Bot</h1>
+        <div class="user-badge" id="userBadge">Yuklanmoqda...</div>
+    </div>
+
+    <div class="container">
+
+        <!-- ================= TAB 1: QIDIRUV ================= -->
+        <div class="tab-pane active" id="tab-search">
+            <div class="card">
+                <div class="card-title">🔍 Natijalarni tekshirish</div>
+                <div class="form-group">
+                    <label>ID raqamni kiriting (4 yoki 6 xonali):</label>
+                    <input type="number" id="searchId" class="input-field" placeholder="Masalan: 1234 yoki 123456" inputmode="numeric">
+                </div>
+                <button class="btn" id="btnSearch" onclick="performSearch()">
+                    <span>Qidirish</span>
+                </button>
+            </div>
+
+            <div id="searchResult" style="display: none;"></div>
+        </div>
+
+        <!-- ================= TAB 2: TALABGOR QO'SHISH ================= -->
+        <div class="tab-pane" id="tab-add">
+            <div id="addGuardBanner" class="banner banner-warning" style="display: none;">
+                ⚠️ Talabgor qo'shish faqat tasdiqlangan nazoratchilar uchun. So'rov yuborish uchun <b>Profil</b> bo'limiga o'ting.
+            </div>
+
+            <div class="card" id="addFormCard">
+                <div class="card-title">➕ Yangi talabgor kiritish</div>
+                <form id="talabgorForm" onsubmit="submitTalabgor(event)">
+                    <div class="form-group">
+                        <label>Familiya:</label>
+                        <input type="text" id="addFamiliya" class="input-field" required placeholder="Masalan: Abdullayev">
+                    </div>
+                    <div class="form-group">
+                        <label>Ism:</label>
+                        <input type="text" id="addIsm" class="input-field" required placeholder="Masalan: Alisher">
+                    </div>
+                    <div class="form-group">
+                        <label>Otasining ismi:</label>
+                        <input type="text" id="addOtasi" class="input-field" required placeholder="Masalan: Olimovich">
+                    </div>
+                    <div class="form-group">
+                        <label>Telefon raqam:</label>
+                        <input type="tel" id="addTelefon" class="input-field" required placeholder="Masalan: 901234567" inputmode="tel">
+                    </div>
+                    <div class="form-group">
+                        <label>ID raqam (4 yoki 6 xonali):</label>
+                        <input type="number" id="addIdRaqam" class="input-field" required placeholder="1234 yoki 123456" inputmode="numeric">
+                    </div>
+                    <div class="form-group">
+                        <label>Talabgor rasmi:</label>
+                        <div class="photo-picker" id="photoPicker">
+                            <span id="pickerText">📷 Rasm yuklash (bosing)</span>
+                            <input type="file" id="addPhoto" accept="image/*" required onchange="handlePhotoSelect(event)">
+                            <img id="photoPreview" class="photo-preview" alt="Preview">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn" id="btnSubmitTalabgor">
+                        <span>Saqlash</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- ================= TAB 3: PROFIL ================= -->
+        <div class="tab-pane" id="tab-profile">
+            <div class="card">
+                <div class="card-title">👤 Mening profilim</div>
+                <div style="margin-bottom: 12px;">
+                    <p style="font-size: 15px; font-weight: 600;" id="profileName">—</p>
+                    <p style="font-size: 13px; color: var(--hint-color);" id="profileUsername">@—</p>
+                    <p style="font-size: 12px; color: var(--hint-color); margin-top: 4px;" id="profileId">ID: —</p>
+                </div>
+                <hr style="border: none; border-top: 1px solid var(--card-border); margin: 12px 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <span style="font-size: 14px;">Nazoratchi statusi:</span>
+                    <span id="profileStatusBadge" class="badge badge-warning">Yuklanmoqda...</span>
+                </div>
+                <div id="requestNazoratchiSection" style="display: none; margin-top: 10px;">
+                    <button class="btn btn-secondary" id="btnRequestNazoratchi" onclick="requestNazoratchiRole()">
+                        <span>🧑‍💼 Nazoratchi bo'lish so'rovini yuborish</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Pastki navigatsiya -->
+    <div class="tab-bar">
+        <div class="tab-item active" onclick="switchTab('tab-search', this)">
+            <span class="tab-icon">🔍</span>
+            <span>Qidiruv</span>
+        </div>
+        <div class="tab-item" onclick="switchTab('tab-add', this)">
+            <span class="tab-icon">➕</span>
+            <span>Qo'shish</span>
+        </div>
+        <div class="tab-item" onclick="switchTab('tab-profile', this)">
+            <span class="tab-icon">👤</span>
+            <span>Profil</span>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram ? window.Telegram.WebApp : null;
+        let currentUser = null;
+        let isApprovedNazoratchi = false;
+
+        // Telegram WebApp ishga tushirish
+        if (tg) {
+            tg.ready();
+            tg.expand();
+            if (tg.setHeaderColor) {
+                tg.setHeaderColor('secondary_bg_color');
+            }
+        }
+
+        function haptic(type = 'impact', style = 'light') {
+            if (tg && tg.HapticFeedback) {
+                if (type === 'notification') {
+                    tg.HapticFeedback.notificationOccurred(style);
+                } else {
+                    tg.HapticFeedback.impactOccurred(style);
+                }
+            }
+        }
+
+        // Tablarni almashtirish
+        function switchTab(tabId, el) {
+            haptic('impact', 'light');
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-item').forEach(i => i.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            el.classList.add('active');
+        }
+
+        // InitData orqali API so'rov yuborish uchun header tayyorlash
+        function getAuthHeaders() {
+            const headers = {};
+            if (tg && tg.initData) {
+                headers['Authorization'] = 'Bearer ' + tg.initData;
+                headers['X-Telegram-Init-Data'] = tg.initData;
+            }
+            return headers;
+        }
+
+        // Foydalanuvchi ma'lumotlarini yuklash
+        async function loadUserInfo() {
+            try {
+                const res = await fetch('/api/miniapp/me/', {
+                    headers: getAuthHeaders()
+                });
+                const data = await res.json();
+                if (data.success) {
+                    currentUser = data.user;
+                    isApprovedNazoratchi = data.is_nazoratchi;
+
+                    document.getElementById('userBadge').textContent =
+                        `${currentUser.first_name || ''} ${currentUser.last_name || ''} (@${currentUser.username || 'id' + currentUser.id})`.trim();
+
+                    document.getElementById('profileName').textContent =
+                        `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() || 'Foydalanuvchi';
+                    document.getElementById('profileUsername').textContent = currentUser.username ? '@' + currentUser.username : '—';
+                    document.getElementById('profileId').textContent = 'Telegram ID: ' + currentUser.id;
+
+                    const statusBadge = document.getElementById('profileStatusBadge');
+                    const reqSection = document.getElementById('requestNazoratchiSection');
+                    const addGuardBanner = document.getElementById('addGuardBanner');
+                    const addFormCard = document.getElementById('addFormCard');
+
+                    if (data.nazoratchi_status === 'approved') {
+                        statusBadge.className = 'badge badge-success';
+                        statusBadge.textContent = '✅ Tasdiqlangan';
+                        reqSection.style.display = 'none';
+                        addGuardBanner.style.display = 'none';
+                        addFormCard.style.opacity = '1';
+                        enableForm(true);
+                    } else if (data.nazoratchi_status === 'pending') {
+                        statusBadge.className = 'badge badge-warning';
+                        statusBadge.textContent = '⏳ Ko\'rib chiqilmoqda';
+                        reqSection.style.display = 'none';
+                        addGuardBanner.style.display = 'block';
+                        addFormCard.style.opacity = '0.5';
+                        enableForm(false);
+                    } else if (data.nazoratchi_status === 'rejected') {
+                        statusBadge.className = 'badge badge-danger';
+                        statusBadge.textContent = '❌ Rad etilgan';
+                        reqSection.style.display = 'block';
+                        addGuardBanner.style.display = 'block';
+                        addFormCard.style.opacity = '0.5';
+                        enableForm(false);
+                    } else {
+                        statusBadge.className = 'badge';
+                        statusBadge.textContent = 'Oddiy foydalanuvchi';
+                        reqSection.style.display = 'block';
+                        addGuardBanner.style.display = 'block';
+                        addFormCard.style.opacity = '0.5';
+                        enableForm(false);
+                    }
+                } else {
+                    document.getElementById('userBadge').textContent = 'Mehmon rejimida';
+                    document.getElementById('profileStatusBadge').textContent = 'Aniqlanmadi';
+                }
+            } catch (err) {
+                console.error(err);
+                document.getElementById('userBadge').textContent = 'Ulanishda xatolik';
+            }
+        }
+
+        function enableForm(enable) {
+            const inputs = document.querySelectorAll('#talabgorForm input, #talabgorForm button');
+            inputs.forEach(el => el.disabled = !enable);
+        }
+
+        // Nazoratchi so'rovini yuborish
+        async function requestNazoratchiRole() {
+            haptic('impact', 'medium');
+            const btn = document.getElementById('btnRequestNazoratchi');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner"></div> So\'rov yuborilmoqda...';
+
+            try {
+                const res = await fetch('/api/miniapp/request-nazoratchi/', {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+                const data = await res.json();
+                if (data.success) {
+                    haptic('notification', 'success');
+                    alert(data.message || "So'rov adminga yuborildi!");
+                    loadUserInfo();
+                } else {
+                    haptic('notification', 'error');
+                    alert(data.detail || "Xatolik yuz berdi.");
+                }
+            } catch (err) {
+                alert("Server bilan bog'lanib bo'lmadi.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>🧑‍💼 Nazoratchi bo\'lish so\'rovini yuborish</span>';
+            }
+        }
+
+        // Qidiruv
+        async function performSearch() {
+            const id = document.getElementById('searchId').value.trim();
+            if (!id || (!/^\d{4}$/.test(id) && !/^\d{6}$/.test(id))) {
+                haptic('notification', 'warning');
+                alert("ID raqam 4 yoki 6 xonali son bo'lishi kerak!");
+                return;
+            }
+
+            haptic('impact', 'light');
+            const btn = document.getElementById('btnSearch');
+            const resultBox = document.getElementById('searchResult');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner"></div> Qidirilmoqda...';
+            resultBox.style.display = 'none';
+
+            try {
+                const res = await fetch(`/api/miniapp/search/${id}/`);
+                const data = await res.json();
+
+                if (!data.success || !data.found) {
+                    haptic('notification', 'warning');
+                    resultBox.innerHTML = `
+                        <div class="card">
+                            <div class="banner banner-warning">
+                                ❌ '${id}' ID raqam bo'yicha ma'lumot yoki PDF topilmadi.
+                            </div>
+                        </div>
+                    `;
+                    resultBox.style.display = 'block';
+                    return;
+                }
+
+                haptic('notification', 'success');
+                let html = '<div class="card">';
+                if (data.talabgor) {
+                    const t = data.talabgor;
+                    html += `
+                        <div class="result-card" style="margin-bottom: 14px;">
+                            <img src="${t.photo_url || ''}" class="result-photo" alt="Rasm" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'75\\' height=\\'75\\'><rect width=\\'100%\\' height=\\'100%\\' fill=\\'%23eee\\'/><text x=\\'50%\\' y=\\'50%\\' dominant-baseline=\\'middle\\' text-anchor=\\'middle\\' fill=\\'%23999\\'>Rasm yo\\\'q</text></svg>'">
+                            <div class="result-info">
+                                <h3>${t.fio}</h3>
+                                <p>🆔 ID raqam: <b>${t.id_raqam}</b></p>
+                                <p>📞 Telefon: ${t.telefon}</p>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (data.has_pdf) {
+                    html += `
+                        <a href="${data.pdf_download_url}" target="_blank" class="btn" style="text-decoration: none;">
+                            <span>📄 Test natijasi (PDF)ni yuklab olish</span>
+                        </a>
+                    `;
+                } else {
+                    html += `
+                        <div class="banner banner-warning" style="margin-bottom: 0;">
+                            ℹ️ Ushbu talabgor uchun test PDF fayli hali yuklanmagan.
+                        </div>
+                    `;
+                }
+                html += '</div>';
+                resultBox.innerHTML = html;
+                resultBox.style.display = 'block';
+            } catch (err) {
+                alert("Qidiruvda xatolik yuz berdi.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>Qidirish</span>';
+            }
+        }
+
+        // Rasm tanlash ko'rinishi
+        function handlePhotoSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('photoPreview');
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                    document.getElementById('pickerText').textContent = '✅ Rasm tanlandi: ' + file.name;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Talabgor saqlash
+        async function submitTalabgor(e) {
+            e.preventDefault();
+            if (!isApprovedNazoratchi) {
+                haptic('notification', 'error');
+                alert("Talabgor qo'shish uchun faqat tasdiqlangan nazoratchilarga ruxsat berilgan.");
+                return;
+            }
+
+            const idRaqam = document.getElementById('addIdRaqam').value.trim();
+            if (!/^\d{4}$/.test(idRaqam) && !/^\d{6}$/.test(idRaqam)) {
+                haptic('notification', 'warning');
+                alert("ID raqam 4 yoki 6 xonali son bo'lishi kerak!");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('familiya', document.getElementById('addFamiliya').value.trim());
+            formData.append('ism', document.getElementById('addIsm').value.trim());
+            formData.append('otasining_ismi', document.getElementById('addOtasi').value.trim());
+            formData.append('telefon', document.getElementById('addTelefon').value.trim());
+            formData.append('id_raqam', idRaqam);
+            formData.append('photo', document.getElementById('addPhoto').files[0]);
+
+            const btn = document.getElementById('btnSubmitTalabgor');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner"></div> Saqlanmoqda...';
+
+            try {
+                const res = await fetch('/api/miniapp/talabgor/', {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success) {
+                    haptic('notification', 'success');
+                    alert("✅ Talabgor muvaffaqiyatli saqlandi!");
+                    document.getElementById('talabgorForm').reset();
+                    document.getElementById('photoPreview').style.display = 'none';
+                    document.getElementById('pickerText').textContent = '📷 Rasm yuklash (bosing)';
+                } else {
+                    haptic('notification', 'error');
+                    alert("Xatolik: " + (data.detail || "Saqlab bo'lmadi."));
+                }
+            } catch (err) {
+                alert("Serverga ma'lumot yuborishda xatolik.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>Saqlash</span>';
+            }
+        }
+
+        // Sahifa ochilishi bilan
+        document.addEventListener('DOMContentLoaded', () => {
+            loadUserInfo();
+        });
+    </script>
+</body>
+</html>

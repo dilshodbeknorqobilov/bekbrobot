@@ -1,3 +1,4 @@
+import logging
 from typing import Optional
 
 from aiogram import Bot, F, Router
@@ -13,6 +14,7 @@ from bot.utils import ID_PATTERN, normalize_phone
 from core.models import Nazoratchi, Talabgor
 
 router = Router()
+logger = logging.getLogger(__name__)
 
 
 async def _get_approved_nazoratchi(telegram_id: int) -> Optional[Nazoratchi]:
@@ -97,14 +99,12 @@ async def get_telefon_text(message: Message, state: FSMContext) -> None:
 
 
 @router.message(TalabgorForm.photo, F.photo)
-async def get_photo(message: Message, state: FSMContext, bot: Bot) -> None:
+async def get_photo(message: Message, state: FSMContext) -> None:
     photo = message.photo[-1]
-    file = await bot.get_file(photo.file_id)
-    buffer = await bot.download_file(file.file_path)
+    # RAM xotirasini tejash uchun to'liq rasm baytlari o'rniga faqat file_id saqlanadi
     await state.update_data(
-        photo_bytes=buffer.read(),
-        photo_name=f"{photo.file_unique_id}.jpg",
         photo_file_id=photo.file_id,
+        photo_unique_id=photo.file_unique_id,
     )
     await state.set_state(TalabgorForm.id_raqam)
     await message.answer("ID raqamni kiriting (4 yoki 6 xonali):", reply_markup=cancel_keyboard())
@@ -116,7 +116,7 @@ async def get_photo_invalid(message: Message) -> None:
 
 
 @router.message(TalabgorForm.id_raqam, F.text)
-async def get_id_raqam(message: Message, state: FSMContext) -> None:
+async def get_id_raqam(message: Message, state: FSMContext, bot: Bot) -> None:
     id_raqam = message.text.strip()
 
     if not ID_PATTERN.match(id_raqam):
@@ -136,22 +136,45 @@ async def get_id_raqam(message: Message, state: FSMContext) -> None:
         return
 
     data = await state.get_data()
+    photo_file_id = data.get("photo_file_id")
+    if not photo_file_id:
+        await message.answer(
+            "Rasm topilmadi. Iltimos, jarayonni qaytadan boshlang.",
+            reply_markup=nazoratchi_menu(),
+        )
+        await state.clear()
+        return
 
-    talabgor = Talabgor(
-        familiya=data["familiya"],
-        ism=data["ism"],
-        otasining_ismi=data["otasining_ismi"],
-        telefon=data["telefon"],
-        id_raqam=id_raqam,
-        nazoratchi_id=data["nazoratchi_id"],
-    )
-    await sync_to_async(talabgor.photo.save)(
-        data["photo_name"], ContentFile(data["photo_bytes"]), save=False
-    )
-    await talabgor.asave()
+    try:
+        # Rasmni faqat barcha ma'lumotlar to'liq va to'g'ri bo'lganda yuklab olamiz
+        file = await bot.get_file(photo_file_id)
+        buffer = await bot.download_file(file.file_path)
+        photo_bytes = buffer.read()
+        photo_name = f"{data.get('photo_unique_id', id_raqam)}.jpg"
+
+        talabgor = Talabgor(
+            familiya=data["familiya"],
+            ism=data["ism"],
+            otasining_ismi=data["otasining_ismi"],
+            telefon=data["telefon"],
+            id_raqam=id_raqam,
+            nazoratchi_id=data["nazoratchi_id"],
+        )
+        await sync_to_async(talabgor.photo.save)(
+            photo_name, ContentFile(photo_bytes), save=False
+        )
+        await talabgor.asave()
+    except Exception:
+        logger.exception("Talabgorni saqlashda xatolik yuz berdi:")
+        await message.answer(
+            "❌ Ma'lumotlarni saqlashda xatolik yuz berdi. Iltimos, qaytadan urinib ko'ring.",
+            reply_markup=nazoratchi_menu(),
+        )
+        await state.clear()
+        return
 
     await message.answer_photo(
-        data["photo_file_id"],
+        photo_file_id,
         caption=(
             "✅ Ma'lumot muvaffaqiyatli saqlandi!\n\n"
             f"Familiya: {talabgor.familiya}\n"

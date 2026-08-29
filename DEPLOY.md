@@ -64,6 +64,7 @@ nano .env
 - `BOT_TOKEN` — @BotFather'dan olingan token
 - `ADMIN_IDS` — admin(lar)ning Telegram ID raqami(lari), vergul bilan
 - `TESTPDF_DIR` — masalan `/opt/bekzodbro/testpdf` (PDF fayllar shu papkaga joylanadi)
+- `MINI_APP_URL` — Telegram Mini App manzili, masalan `https://your-domain.com/webapp/`
 
 ## 5. Migratsiya va statik fayllar
 
@@ -88,6 +89,7 @@ Fayl mazmuni (agar qo'lda tahrirlamoqchi bo'lsangiz — `sudo nano /etc/systemd/
 [Unit]
 Description=Bekzodbro Telegram Bot
 After=network.target postgresql.service
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple
@@ -98,6 +100,8 @@ EnvironmentFile=/opt/bekzodbro/.env
 ExecStart=/opt/bekzodbro/venv/bin/python /opt/bekzodbro/bot/main.py
 Restart=always
 RestartSec=5
+TimeoutStopSec=15
+KillMode=mixed
 
 [Install]
 WantedBy=multi-user.target
@@ -248,3 +252,26 @@ sudo systemctl restart bekzodbro-bot bekzodbro-web
 `testpdf` papkasiga `123456_biror-nom.pdf` yoki `1234_biror-nom.pdf` kabi
 4 yoki 6 xonali ID bilan boshlanuvchi nomda PDF fayllar joylang. Foydalanuvchi
 botga shu ID raqamni yuborganda mos fayl avtomatik yuboriladi.
+
+## 12. Telegram Mini App (Web App) ni ulash
+
+Mini App foydalanuvchilarga bot ichida qulay veb-interfeys taqdim etadi (natijalarni tekshirish, PDF yuklab olish, talabgor kiritish va nazoratchi statusini boshqarish).
+
+1. **HTTPS domen talabi:**
+   Telegram Mini App faqat **HTTPS** protokoli orqali ishlaydi. 8-bandda certbot orqali SSL o'rnatilgan domeningizdan foydalaning (masalan `https://your-domain.com/webapp/`).
+
+2. **.env faylida ko'rsatish:**
+   ```bash
+   nano /opt/bekzodbro/.env
+   # Qo'shing:
+   MINI_APP_URL=https://your-domain.com/webapp/
+   ```
+
+3. **@BotFather orqali Menu Button sozlash (tavsiya etiladi):**
+   Foydalanuvchi bot chatiga kirganida chap pastki burchakda doimiy **"Mini App"** tugmasi chiqib turishi uchun:
+   - Telegramda **@BotFather** botiga kiring.
+   - `/mybots` buyrug'ini yuboring va botingizni tanlang.
+   - **Bot Settings** ➔ **Menu Button** ➔ **Configure menu button** ni bosing.
+   - Mini App URL manzilini yuboring: `https://your-domain.com/webapp/`
+   - Tugma nomini kiriting: masalan, `📱 Ilovani ochish`
+

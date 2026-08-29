@@ -4,10 +4,26 @@ from django.urls import path, re_path
 from django.views.static import serve as static_serve
 
 from core.views import talabgor_by_id
+from core.views_miniapp import (
+    miniapp_add_talabgor,
+    miniapp_download_pdf,
+    miniapp_home,
+    miniapp_request_nazoratchi,
+    miniapp_search,
+    miniapp_user_info,
+)
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    # Eski REST endpoint (orqaga moslik uchun):
     path("api/talabgorlar/<str:id_raqam>/", talabgor_by_id, name="api-talabgor-detail"),
+    # Telegram Mini App sahifasi va API yo'llari:
+    path("webapp/", miniapp_home, name="miniapp-home"),
+    path("api/miniapp/me/", miniapp_user_info, name="miniapp-user-info"),
+    path("api/miniapp/request-nazoratchi/", miniapp_request_nazoratchi, name="miniapp-request-nazoratchi"),
+    path("api/miniapp/talabgor/", miniapp_add_talabgor, name="miniapp-add-talabgor"),
+    path("api/miniapp/search/<str:id_raqam>/", miniapp_search, name="miniapp-search"),
+    path("api/miniapp/pdf/<str:id_raqam>/", miniapp_download_pdf, name="miniapp-download-pdf"),
 ]
 
 # Rasm fayllarini (media/) xizmat qilish — nginx bo'lmasa ham (masalan

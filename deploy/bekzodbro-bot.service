@@ -1,6 +1,7 @@
 [Unit]
 Description=Bekzodbro Telegram Bot
 After=network.target postgresql.service
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple
@@ -11,6 +12,9 @@ EnvironmentFile=/opt/bekzodbro/.env
 ExecStart=/opt/bekzodbro/venv/bin/python /opt/bekzodbro/bot/main.py
 Restart=always
 RestartSec=5
+TimeoutStopSec=15
+KillMode=mixed
 
 [Install]
 WantedBy=multi-user.target
+

@@ -24,6 +24,7 @@ from aiogram.fsm.storage.memory import MemoryStorage  # noqa: E402
 
 from bot.config import BOT_TOKEN  # noqa: E402
 from bot.handlers import admin_approval, pdf_search, start, talabgor  # noqa: E402
+from bot.middlewares import DjangoDbConnectionMiddleware  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -40,15 +41,40 @@ async def main() -> None:
     bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher(storage=MemoryStorage())
 
+    # PostgreSQL ulanishlarini har bir Telegram so'rovida tozalash va tiklash:
+    dp.update.outer_middleware(DjangoDbConnectionMiddleware())
+
     dp.include_router(start.router)
     dp.include_router(admin_approval.router)
     dp.include_router(talabgor.router)
     dp.include_router(pdf_search.router)
 
-    await bot.delete_webhook(drop_pending_updates=True)
-    logger.info("Bot ishga tushdi (polling).")
-    await dp.start_polling(bot)
+    # Tarmoq uzilishlari paytida xavfsiz webhook o'chirish (5 marta urinish)
+    for attempt in range(1, 6):
+        try:
+            await bot.delete_webhook(drop_pending_updates=True)
+            break
+        except Exception as exc:
+            logger.warning(
+                "Webhookni o'chirishda xatolik (urinish %s/5): %s. 3 soniyadan so'ng qayta uriniladi...",
+                attempt,
+                exc,
+            )
+            await asyncio.sleep(3)
+
+    try:
+        logger.info("Bot ishga tushdi (polling).")
+        await dp.start_polling(
+            bot,
+            allowed_updates=dp.resolve_used_update_types(),
+        )
+    finally:
+        logger.info("Bot to'xtatilmoqda, aiohttp sessiyasi yopilmoqda...")
+        await bot.session.close()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        logger.info("Bot to'xtatildi.")

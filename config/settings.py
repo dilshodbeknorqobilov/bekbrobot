@@ -106,3 +106,5 @@ BOT_TOKEN = env("BOT_TOKEN", default="")
 ADMIN_IDS = [int(x) for x in env.list("ADMIN_IDS", default=[]) if x]
 # 4 yoki 6 xonali ID bilan boshlanuvchi PDF fayllar shu papkada qidiriladi
 TESTPDF_DIR = env("TESTPDF_DIR", default=str(BASE_DIR / "testpdf"))
+# Telegram Mini App (Web App) URL manzili (masalan: https://your-domain.com/webapp/)
+MINI_APP_URL = env("MINI_APP_URL", default="")
