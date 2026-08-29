@@ -213,6 +213,106 @@
         .badge-warning { background: rgba(255, 149, 0, 0.15); color: var(--warning-color); }
         .badge-danger { background: rgba(255, 59, 48, 0.15); color: var(--danger-color); }
 
+        /* Ro'yxat kartochkalari va sahifalash */
+        .list-card {
+            background: var(--secondary-bg);
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+            border: 1px solid var(--card-border);
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .list-card-left {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .list-thumb {
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            object-fit: cover;
+            background: #e1e4e8;
+            flex-shrink: 0;
+        }
+
+        .list-details {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .list-details h4 {
+            font-size: 14px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 2px;
+        }
+
+        .list-details p {
+            font-size: 12px;
+            color: var(--hint-color);
+            margin-bottom: 1px;
+        }
+
+        .btn-edit {
+            padding: 8px 12px;
+            font-size: 13px;
+            border-radius: 8px;
+            background: var(--button-color);
+            color: var(--button-text-color);
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .pagination-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 14px;
+            padding: 10px 0;
+        }
+
+        /* Modal oyna */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            padding: 16px;
+        }
+
+        .modal-content {
+            background: var(--secondary-bg);
+            border-radius: 14px;
+            max-width: 480px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 18px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--card-border);
+        }
+
         /* Pastki menyu (Tab Bar) */
         .tab-bar {
             position: fixed;
@@ -377,6 +477,39 @@
             </div>
         </div>
 
+        <!-- ================= TAB 3: RO'YXAT (PAGINATION 10) ================= -->
+        <div class="tab-pane" id="tab-list">
+            <div id="listGuardBanner" class="banner banner-warning" style="display: none;">
+                ⚠️ Talabgorlar ro'yxatini ko'rish faqat tasdiqlangan nazoratchilar uchun.
+            </div>
+
+            <div id="listContentSection">
+                <div class="card" style="margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <div class="card-title" style="margin-bottom: 0;">📋 Talabgorlar ro'yxati</div>
+                        <span id="talabgorTotalBadge" class="badge badge-success">0 ta</span>
+                    </div>
+                    <div>
+                        <input type="text" id="talabgorSearchInput" class="input-field" placeholder="Qidirish (ID, ism, telefon)..." oninput="handleTalabgorSearch()">
+                    </div>
+                </div>
+
+                <div id="talabgorlarListContainer">
+                    <div style="text-align: center; padding: 30px; color: var(--hint-color);">Yuklanmoqda...</div>
+                </div>
+
+                <div class="card pagination-bar" id="paginationCard" style="display: none;">
+                    <button class="btn btn-secondary" id="btnPrevPage" style="width: auto; padding: 8px 14px;" onclick="changePage(-1)">
+                        <span>◀️ Oldingi</span>
+                    </button>
+                    <span id="pageIndicator" style="font-size: 13px; font-weight: 600; color: var(--hint-color);">1 / 1</span>
+                    <button class="btn btn-secondary" id="btnNextPage" style="width: auto; padding: 8px 14px;" onclick="changePage(1)">
+                        <span>Keyingi ▶️</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <!-- Pastki navigatsiya -->
@@ -389,9 +522,62 @@
             <span class="tab-icon">➕</span>
             <span>Qo'shish</span>
         </div>
+        <div class="tab-item" onclick="switchTab('tab-list', this); loadMyTalabgorlar(1);">
+            <span class="tab-icon">📋</span>
+            <span>Ro'yxat</span>
+        </div>
         <div class="tab-item" onclick="switchTab('tab-profile', this)">
             <span class="tab-icon">👤</span>
             <span>Profil</span>
+        </div>
+    </div>
+
+    <!-- ================= EDIT MODAL ================= -->
+    <div id="editModal" class="modal-overlay">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                <h3 style="font-size: 16px; font-weight: 700;">✏️ Talabgorni tahrirlash</h3>
+                <button type="button" onclick="closeEditModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--hint-color);">&times;</button>
+            </div>
+            <form id="editTalabgorForm" onsubmit="submitEditTalabgor(event)">
+                <input type="hidden" id="editTalabgorId">
+                <div class="form-group">
+                    <label>Familiya:</label>
+                    <input type="text" id="editFamiliya" class="input-field" required>
+                </div>
+                <div class="form-group">
+                    <label>Ism:</label>
+                    <input type="text" id="editIsm" class="input-field" required>
+                </div>
+                <div class="form-group">
+                    <label>Otasining ismi:</label>
+                    <input type="text" id="editOtasi" class="input-field" required>
+                </div>
+                <div class="form-group">
+                    <label>Telefon raqam:</label>
+                    <input type="tel" id="editTelefon" class="input-field" required inputmode="tel">
+                </div>
+                <div class="form-group">
+                    <label>ID raqam (4 yoki 6 xonali):</label>
+                    <input type="number" id="editIdRaqam" class="input-field" required inputmode="numeric">
+                </div>
+                <div class="form-group">
+                    <label>Yangi rasm (ixtiyoriy, almashtirmoqchi bo'lsangiz):</label>
+                    <div class="photo-picker" id="editPhotoPicker">
+                        <span id="editPickerText">📷 Yangi rasm tanlash (ixtiyoriy)</span>
+                        <input type="file" id="editPhoto" accept="image/*" onchange="handleEditPhotoSelect(event)">
+                        <img id="editPhotoPreview" class="photo-preview" alt="Preview">
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 16px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeEditModal()">
+                        <span>Bekor qilish</span>
+                    </button>
+                    <button type="submit" class="btn" id="btnSubmitEdit">
+                        <span>💾 Saqlash</span>
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -461,13 +647,17 @@
                     const reqSection = document.getElementById('requestNazoratchiSection');
                     const addGuardBanner = document.getElementById('addGuardBanner');
                     const addFormCard = document.getElementById('addFormCard');
+                    const listGuardBanner = document.getElementById('listGuardBanner');
+                    const listContentSection = document.getElementById('listContentSection');
 
-                    if (data.nazoratchi_status === 'approved') {
+                    if (data.nazoratchi_status === 'approved' || data.is_admin) {
                         statusBadge.className = 'badge badge-success';
                         statusBadge.textContent = '✅ Tasdiqlangan';
                         reqSection.style.display = 'none';
                         addGuardBanner.style.display = 'none';
                         addFormCard.style.opacity = '1';
+                        if (listGuardBanner) listGuardBanner.style.display = 'none';
+                        if (listContentSection) listContentSection.style.opacity = '1';
                         enableForm(true);
                     } else if (data.nazoratchi_status === 'pending') {
                         statusBadge.className = 'badge badge-warning';
@@ -475,6 +665,8 @@
                         reqSection.style.display = 'none';
                         addGuardBanner.style.display = 'block';
                         addFormCard.style.opacity = '0.5';
+                        if (listGuardBanner) listGuardBanner.style.display = 'block';
+                        if (listContentSection) listContentSection.style.opacity = '0.5';
                         enableForm(false);
                     } else if (data.nazoratchi_status === 'rejected') {
                         statusBadge.className = 'badge badge-danger';
@@ -482,6 +674,8 @@
                         reqSection.style.display = 'block';
                         addGuardBanner.style.display = 'block';
                         addFormCard.style.opacity = '0.5';
+                        if (listGuardBanner) listGuardBanner.style.display = 'block';
+                        if (listContentSection) listContentSection.style.opacity = '0.5';
                         enableForm(false);
                     } else {
                         statusBadge.className = 'badge';
@@ -489,6 +683,8 @@
                         reqSection.style.display = 'block';
                         addGuardBanner.style.display = 'block';
                         addFormCard.style.opacity = '0.5';
+                        if (listGuardBanner) listGuardBanner.style.display = 'block';
+                        if (listContentSection) listContentSection.style.opacity = '0.5';
                         enableForm(false);
                     }
                 } else {
@@ -673,6 +869,200 @@
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '<span>Saqlash</span>';
+            }
+        }
+
+        // ================= TALABGORLAR RO'YXATI VA TAHRIRLASH =================
+        let currentListPage = 1;
+        let totalListPages = 1;
+        let searchListDebounce = null;
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        async function loadMyTalabgorlar(page = 1) {
+            currentListPage = page;
+            const container = document.getElementById('talabgorlarListContainer');
+            const paginationCard = document.getElementById('paginationCard');
+            const searchInput = document.getElementById('talabgorSearchInput');
+            const q = searchInput ? searchInput.value.trim() : '';
+
+            container.innerHTML = '<div style="text-align: center; padding: 25px;"><div class="spinner" style="border-top-color: var(--button-color); border-color: rgba(0,0,0,0.1); margin: 0 auto 10px;"></div><span style="color: var(--hint-color); font-size: 13px;">Yuklanmoqda...</span></div>';
+
+            try {
+                const res = await fetch(`/api/miniapp/my-talabgorlar/?page=${page}&q=${encodeURIComponent(q)}`, {
+                    headers: getAuthHeaders()
+                });
+                const data = await res.json();
+
+                if (!data.success) {
+                    container.innerHTML = `<div class="banner banner-danger">${data.detail || "Ma'lumotlarni yuklab bo'lmadi."}</div>`;
+                    paginationCard.style.display = 'none';
+                    return;
+                }
+
+                document.getElementById('talabgorTotalBadge').textContent = `${data.total_count} ta`;
+
+                if (!data.results || data.results.length === 0) {
+                    container.innerHTML = `
+                        <div class="card" style="text-align: center; padding: 30px 20px; color: var(--hint-color);">
+                            📭 Talabgorlar topilmadi.
+                        </div>
+                    `;
+                    paginationCard.style.display = 'none';
+                    return;
+                }
+
+                totalListPages = data.total_pages;
+                let html = '';
+                data.results.forEach(t => {
+                    const encodedJson = encodeURIComponent(JSON.stringify(t));
+                    html += `
+                        <div class="list-card">
+                            <div class="list-card-left">
+                                <img src="${t.photo_url || ''}" class="list-thumb" alt="Rasm" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'50\\' height=\\'50\\'><rect width=\\'100%\\' height=\\'100%\\' fill=\\'%23eee\\'/><text x=\\'50%\\' y=\\'50%\\' dominant-baseline=\\'middle\\' text-anchor=\\'middle\\' fill=\\'%23999\\'>—</text></svg>'">
+                                <div class="list-details">
+                                    <h4>${escapeHtml(t.fio)}</h4>
+                                    <p>🆔 ID: <b>${escapeHtml(t.id_raqam)}</b></p>
+                                    <p>📞 ${escapeHtml(t.telefon)}</p>
+                                    <p style="font-size: 11px; opacity: 0.8;">📅 ${escapeHtml(t.created_at)}</p>
+                                </div>
+                            </div>
+                            <button class="btn-edit" onclick="openEditModalFromData('${encodedJson}')">
+                                <span>✏️ Tahrirlash</span>
+                            </button>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = html;
+
+                // Sahifalash (Pagination - har sahifada 10 tadan)
+                if (data.total_pages > 1) {
+                    paginationCard.style.display = 'flex';
+                    document.getElementById('pageIndicator').textContent = `${data.page} / ${data.total_pages} - sahifa`;
+                    document.getElementById('btnPrevPage').disabled = !data.has_prev;
+                    document.getElementById('btnNextPage').disabled = !data.has_next;
+                } else {
+                    paginationCard.style.display = 'none';
+                }
+
+            } catch (err) {
+                container.innerHTML = `<div class="banner banner-danger">Server bilan bog'lanishda xatolik.</div>`;
+                paginationCard.style.display = 'none';
+            }
+        }
+
+        function changePage(delta) {
+            haptic('impact', 'light');
+            loadMyTalabgorlar(currentListPage + delta);
+        }
+
+        function handleTalabgorSearch() {
+            clearTimeout(searchListDebounce);
+            searchListDebounce = setTimeout(() => {
+                loadMyTalabgorlar(1);
+            }, 350);
+        }
+
+        function openEditModalFromData(encodedJson) {
+            const t = JSON.parse(decodeURIComponent(encodedJson));
+            haptic('impact', 'medium');
+            document.getElementById('editTalabgorId').value = t.id;
+            document.getElementById('editFamiliya').value = t.familiya;
+            document.getElementById('editIsm').value = t.ism;
+            document.getElementById('editOtasi').value = t.otasining_ismi;
+            document.getElementById('editTelefon').value = t.telefon;
+            document.getElementById('editIdRaqam').value = t.id_raqam;
+
+            const preview = document.getElementById('editPhotoPreview');
+            if (t.photo_url) {
+                preview.src = t.photo_url;
+                preview.style.display = 'block';
+                document.getElementById('editPickerText').textContent = '📷 Rasmni almashtirish (ixtiyoriy)';
+            } else {
+                preview.style.display = 'none';
+                document.getElementById('editPickerText').textContent = '📷 Yangi rasm tanlash (ixtiyoriy)';
+            }
+            document.getElementById('editPhoto').value = '';
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+            document.getElementById('editTalabgorForm').reset();
+            document.getElementById('editPhotoPreview').style.display = 'none';
+        }
+
+        function handleEditPhotoSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('editPhotoPreview');
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                    document.getElementById('editPickerText').textContent = '✅ Yangi rasm tanlandi: ' + file.name;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        async function submitEditTalabgor(e) {
+            e.preventDefault();
+            const talabgorId = document.getElementById('editTalabgorId').value;
+            const idRaqam = document.getElementById('editIdRaqam').value.trim();
+
+            if (!/^\d{4}$/.test(idRaqam) && !/^\d{6}$/.test(idRaqam)) {
+                haptic('notification', 'warning');
+                alert("ID raqam 4 yoki 6 xonali son bo'lishi kerak!");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('familiya', document.getElementById('editFamiliya').value.trim());
+            formData.append('ism', document.getElementById('editIsm').value.trim());
+            formData.append('otasining_ismi', document.getElementById('editOtasi').value.trim());
+            formData.append('telefon', document.getElementById('editTelefon').value.trim());
+            formData.append('id_raqam', idRaqam);
+
+            const photoFile = document.getElementById('editPhoto').files[0];
+            if (photoFile) {
+                formData.append('photo', photoFile);
+            }
+
+            const btn = document.getElementById('btnSubmitEdit');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner"></div> Saqlanmoqda...';
+
+            try {
+                const res = await fetch(`/api/miniapp/talabgor/${talabgorId}/edit/`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success) {
+                    haptic('notification', 'success');
+                    alert("✅ Talabgor ma'lumotlari yangilandi!");
+                    closeEditModal();
+                    loadMyTalabgorlar(currentListPage);
+                } else {
+                    haptic('notification', 'error');
+                    alert("Xatolik: " + (data.detail || "Yangilab bo'lmadi."));
+                }
+            } catch (err) {
+                alert("Serverga ulanishda xatolik.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>💾 Saqlash</span>';
             }
         }
 

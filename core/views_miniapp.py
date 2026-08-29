@@ -4,6 +4,8 @@ import urllib.request
 from pathlib import Path
 
 from django.conf import settings
+from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
+from django.db import models
 from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
@@ -319,3 +321,204 @@ def miniapp_download_pdf(request, id_raqam: str):
         filename=pdf_path.name,
         as_attachment=True,
     )
+
+
+@require_GET
+def miniapp_my_talabgorlar(request):
+    """Tasdiqlangan nazoratchining kiritgan talabgorlari ro'yxatini 10 tadan
+    sahifalab (pagination) qaytarish.
+    """
+    is_valid, user_data, err = get_telegram_user_from_request(request)
+    if not is_valid or not user_data:
+        return JsonResponse(
+            {"success": False, "detail": err or "Autentifikatsiya xatosi."},
+            status=401,
+            json_dumps_params={"ensure_ascii": False},
+        )
+
+    telegram_id = user_data.get("id")
+    admin_ids = getattr(settings, "ADMIN_IDS", [])
+    is_admin = telegram_id in admin_ids
+
+    nazoratchi = Nazoratchi.objects.filter(
+        telegram_id=telegram_id, status=Nazoratchi.Status.APPROVED
+    ).first()
+
+    if not nazoratchi and not is_admin:
+        return JsonResponse(
+            {"success": False, "detail": "Talabgorlar ro'yxatini ko'rish faqat tasdiqlangan nazoratchilarga ruxsat berilgan."},
+            status=403,
+            json_dumps_params={"ensure_ascii": False},
+        )
+
+    if is_admin:
+        qs = Talabgor.objects.all().order_by("-created_at")
+    else:
+        qs = Talabgor.objects.filter(nazoratchi=nazoratchi).order_by("-created_at")
+
+    search_query = (request.GET.get("q") or "").strip()
+    if search_query:
+        qs = qs.filter(
+            models.Q(id_raqam__icontains=search_query)
+            | models.Q(familiya__icontains=search_query)
+            | models.Q(ism__icontains=search_query)
+            | models.Q(telefon__icontains=search_query)
+        )
+
+    paginator = Paginator(qs, 10)  # Har sahifada 10 tadan ma'lumot
+    page_number = request.GET.get("page", 1)
+
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+
+    results = []
+    for t in page_obj:
+        photo_url = request.build_absolute_uri(t.photo.url) if t.photo else None
+        results.append({
+            "id": t.id,
+            "id_raqam": t.id_raqam,
+            "familiya": t.familiya,
+            "ism": t.ism,
+            "otasining_ismi": t.otasining_ismi,
+            "fio": f"{t.familiya} {t.ism} {t.otasining_ismi}".strip(),
+            "telefon": t.telefon,
+            "photo_url": photo_url,
+            "created_at": t.created_at.strftime("%Y-%m-%d %H:%M"),
+        })
+
+    return JsonResponse(
+        {
+            "success": True,
+            "page": page_obj.number,
+            "total_pages": paginator.num_pages,
+            "total_count": paginator.count,
+            "has_next": page_obj.has_next(),
+            "has_prev": page_obj.has_previous(),
+            "results": results,
+        },
+        json_dumps_params={"ensure_ascii": False},
+    )
+
+
+@csrf_exempt
+@require_POST
+def miniapp_edit_talabgor(request, talabgor_id: int):
+    """Tasdiqlangan nazoratchi o'zi kiritgan talabgor ma'lumotlarini tahrirlashi."""
+    is_valid, user_data, err = get_telegram_user_from_request(request)
+    if not is_valid or not user_data:
+        return JsonResponse(
+            {"success": False, "detail": err or "Autentifikatsiya xatosi."},
+            status=401,
+            json_dumps_params={"ensure_ascii": False},
+        )
+
+    telegram_id = user_data.get("id")
+    admin_ids = getattr(settings, "ADMIN_IDS", [])
+    is_admin = telegram_id in admin_ids
+
+    nazoratchi = Nazoratchi.objects.filter(
+        telegram_id=telegram_id, status=Nazoratchi.Status.APPROVED
+    ).first()
+
+    if not nazoratchi and not is_admin:
+        return JsonResponse(
+            {"success": False, "detail": "Faqat tasdiqlangan nazoratchilarga tahrirlash huquqi berilgan."},
+            status=403,
+            json_dumps_params={"ensure_ascii": False},
+        )
+
+    try:
+        talabgor = Talabgor.objects.get(id=talabgor_id)
+    except Talabgor.DoesNotExist:
+        return JsonResponse(
+            {"success": False, "detail": "Talabgor topilmadi."},
+            status=404,
+            json_dumps_params={"ensure_ascii": False},
+        )
+
+    if not is_admin and talabgor.nazoratchi_id != nazoratchi.id:
+        return JsonResponse(
+            {"success": False, "detail": "Siz faqat o'zingiz kiritgan talabgorlarni tahrirlashingiz mumkin."},
+            status=403,
+            json_dumps_params={"ensure_ascii": False},
+        )
+
+    familiya = (request.POST.get("familiya") or "").strip()
+    ism = (request.POST.get("ism") or "").strip()
+    otasining_ismi = (request.POST.get("otasining_ismi") or "").strip()
+    telefon_raw = (request.POST.get("telefon") or "").strip()
+    id_raqam = (request.POST.get("id_raqam") or "").strip()
+    photo = request.FILES.get("photo")
+
+    if not (familiya and ism and otasining_ismi and telefon_raw and id_raqam):
+        return JsonResponse(
+            {"success": False, "detail": "Barcha maydonlar to'ldirilishi shart."},
+            status=400,
+            json_dumps_params={"ensure_ascii": False},
+        )
+
+    if not ID_PATTERN.match(id_raqam):
+        return JsonResponse(
+            {"success": False, "detail": "ID raqam 4 yoki 6 xonali son bo'lishi kerak."},
+            status=400,
+            json_dumps_params={"ensure_ascii": False},
+        )
+
+    if Talabgor.objects.filter(id_raqam=id_raqam).exclude(id=talabgor.id).exists():
+        return JsonResponse(
+            {"success": False, "detail": f"'{id_raqam}' ID raqam boshqa talabgorga tegishli."},
+            status=400,
+            json_dumps_params={"ensure_ascii": False},
+        )
+
+    telefon = normalize_phone(telefon_raw)
+    if not telefon:
+        return JsonResponse(
+            {"success": False, "detail": "Telefon raqami noto'g'ri (masalan: 901234567)."},
+            status=400,
+            json_dumps_params={"ensure_ascii": False},
+        )
+
+    try:
+        talabgor.familiya = familiya
+        talabgor.ism = ism
+        talabgor.otasining_ismi = otasining_ismi
+        talabgor.telefon = telefon
+        talabgor.id_raqam = id_raqam
+
+        if photo:
+            _, ext = photo.name.rsplit(".", 1) if "." in photo.name else ("", "jpg")
+            photo_filename = f"{id_raqam}.{ext.lower()}"
+            talabgor.photo.save(photo_filename, photo, save=False)
+
+        talabgor.save()
+
+        photo_url = request.build_absolute_uri(talabgor.photo.url) if talabgor.photo else None
+        return JsonResponse(
+            {
+                "success": True,
+                "message": "Talabgor ma'lumotlari muvaffaqiyatli yangilandi!",
+                "talabgor": {
+                    "id": talabgor.id,
+                    "id_raqam": talabgor.id_raqam,
+                    "familiya": talabgor.familiya,
+                    "ism": talabgor.ism,
+                    "otasining_ismi": talabgor.otasining_ismi,
+                    "fio": f"{talabgor.familiya} {talabgor.ism} {talabgor.otasining_ismi}".strip(),
+                    "telefon": talabgor.telefon,
+                    "photo_url": photo_url,
+                },
+            },
+            json_dumps_params={"ensure_ascii": False},
+        )
+    except Exception as exc:
+        logger.exception("Talabgorni yangilashda xatolik:")
+        return JsonResponse(
+            {"success": False, "detail": f"Yangilashda xatolik yuz berdi: {str(exc)}"},
+            status=500,
+            json_dumps_params={"ensure_ascii": False},
+        )
